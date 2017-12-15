@@ -97,5 +97,22 @@ ENV/
 # mkdocs documentation
 /site
 
+.idea/
+.vscode/
+
 # mypy
 .mypy_cache/
+Supprimerait .idea/Usor.iml
+Supprimerait .idea/inspectionProfiles/
+Supprimerait .idea/misc.xml
+Supprimerait .idea/modules.xml
+Supprimerait .idea/workspace.xml
+Supprimerait MANIFEST.in
+Supprimerait config.py
+Supprimerait manager.py
+Supprimerait requirements.txt
+Supprimerait setup.cfg
+Supprimerait setup.py
+Supprimerait tests/
+Supprimerait tox.ini
+Supprimerait usor/

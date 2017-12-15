@@ -1,0 +1,7 @@
+Warning: This email contains sensitive information.
+
+This is your reset password token.
+
+Reset token : {{ token }}
+
+@usor on GitHub: https://github.com/drayuk/usor

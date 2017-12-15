@@ -1,0 +1,7 @@
+Hello {{ username }}!.
+
+Thank you for your registry in our application. To activate your account make sure to follow the link below.
+
+{{ url_for("auth.email_verify", token=token, _external=True) }}
+
+@usor on GitHub: https://github.com/drayuk/usor
