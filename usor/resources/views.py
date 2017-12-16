@@ -1,4 +1,3 @@
-from flask import request
 from flask.views import MethodView
 from flask_login import login_required
 
@@ -9,36 +8,27 @@ from ..common.decorators import roles_required, anonymous_required
 
 
 class BaseView(MethodView):
-    def get_request_data(self, schema):
-        data, errors = schema.load(request.get_json())
-        if errors:
-            raise APIException(errors, 422)
-        return data
 
-    def is_user(self, schema):
-        data = self.get_request_data(schema)
-        user = User.get_user(data["login"])
-        if user:
-            return user, data
-        raise APIException("user not found", 404)
-
-    def authenticate_user(self, schema):
-        data = self.get_request_data(schema)
-        user = User.authenticate(data["login"], data["password"])
+    def is_user(self, id):
+        user = User.get_user(id)
         if user:
             return user
-        raise APIException("invalid credential", 401)
+        raise APIException("user not found.", 404)
 
-    def is_role(self, schema):
-        data = self.get_request_data(schema)
-        role = Role.objects(name=data["role"]).get()
+    def is_role(self, id):
+        role = Role.get_role(id)
         if role:
-            return role, data
-        raise APIException("role not found", 404)
+            return role
+        raise APIException("role not found.", 404)
 
-    def create_user(self, schema):
-        data = self.get_request_data(schema)
-        user = User(data["username"], data["email"], data["password"])
+    def authenticate(self, login, password):
+        user = User.authenticate(login, password)
+        if user:
+            return user
+        raise APIException("invalid credential.", 401)
+
+    def create_user(self, username, email, password):
+        user = User(username, email, password)
         user.sid = random_string(32, special=True)
         user.roles.append(Role.objects(name="user").get())
         return user.save()

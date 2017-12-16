@@ -1,9 +1,12 @@
-from ...schemas.user import user_role_schema
+from ...schemas.user import RoleSchema
 from ...models.user import Role, User
-from ...schemas.user import role_schema
 from ...common.flask import APIException
 from ...common.helpers import time_utcnow
+from ...common.decorators import marsh
 from ..views import AdminView
+
+role_descrip = RoleSchema(only=("role", "description"))
+login_role = RoleSchema(only=("login", "role"))
 
 
 class RoleList(AdminView):
@@ -13,9 +16,10 @@ class RoleList(AdminView):
 
 
 class RoleAdd(AdminView):
-    def post(self):
-        data = self.get_request_data(role_schema)
-        if not Role.get_role(data["role"]):
+    decorators = [marsh(role_descrip)]
+
+    def post(self, data):
+        if not self.is_role(data["role"]):
             role = Role(data["role"], data.get("description"))
             role.save()
             return role.to_dict(), 201
@@ -23,15 +27,23 @@ class RoleAdd(AdminView):
 
 
 class RoleDelete(AdminView):
-    def post(self):
-        role, data = self.is_role(role_schema)
+    decorators = [marsh(role_descrip)]
+
+    def post(self, data):
+        role = self.is_role(data["role"])
+
+        users = User.objects.all()
+        [user.roles.remove(role) for user in users if role in user.roles]
+
         role.delete()
         return {"message": True}
 
 
 class RoleEdit(AdminView):
-    def post(self):
-        role, data = self.is_role(role_schema)
+    decorators = [marsh(role_descrip)]
+
+    def post(self, data):
+        role = self.is_role(data["role"])
         if data.get("description"):
             role.description = data["description"]
             role.update_at = time_utcnow()
@@ -40,9 +52,11 @@ class RoleEdit(AdminView):
 
 
 class RoleAssignRemove(AdminView):
-    def post(self, action):
-        role, data = self.is_role(user_role_schema)
-        user = User.get_user(data["login"])
+    decorators = [marsh(login_role)]
+
+    def post(self, data, action):
+        role = self.is_role(data["role"])
+        user = self.is_user(data["login"])
         if action == "assign":
             user.roles.append(role)
         if action == "remove":

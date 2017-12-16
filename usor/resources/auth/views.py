@@ -3,19 +3,20 @@ from flask import Blueprint, request, current_app, make_response
 from ...common.helpers import time_utcnow, random_string
 from ...common.email import email_sender
 from ...common.token import encode_token, decode_token
+from ...common.decorators import marsh
 from ...common.flask import APIException
 from ...models.user import User
-from ...schemas.user import (
-    signup_schema, login_schema, reset_pwd_schema, signin_schema
-)
+from ...schemas.user import UserSchema, LoginSchema
 from ..views import AnonymousView, BaseView
 
 auth_api = Blueprint("auth", __name__, )
 
 
 class Signup(AnonymousView):
-    def post(self):
-        user = self.create_user(signup_schema)
+    decorators = [marsh(UserSchema(only=("username", "email", "password")))]
+
+    def post(self, data):
+        user = self.create_user(data["username"], data["email"], data["password"])
         email_sender(
             recipients=user.email,
             subject="Email address confirmation",
@@ -27,8 +28,10 @@ class Signup(AnonymousView):
 
 
 class Login(AnonymousView):
-    def post(self):
-        user = self.authenticate_user(signin_schema)
+    decorators = [marsh(UserSchema(only=("login", "password")))]
+
+    def post(self, data):
+        user = self.authenticate(data["login"], data["password"])
         if not current_app.config.get("APP_MULTI_SESSION"):
             user.sid = random_string(32, special=True)
             user.save()
@@ -44,8 +47,10 @@ class Login(AnonymousView):
 
 
 class LoginVerify(BaseView):
-    def post(self):
-        user = self.authenticate_user(signin_schema)
+    decorators = [marsh(UserSchema(only=("login", "password")))]
+
+    def post(self, data):
+        user = self.authenticate(data["login"], data["password"])
         if user:
             return {"message": True}
 
@@ -83,8 +88,10 @@ class EmailVerifyResend(AnonymousView):
 
 
 class PasswordForgot(AnonymousView):
-    def post(self):
-        user = self.is_user(login_schema)
+    decorators = [marsh(LoginSchema(only=("login",)))]
+
+    def post(self, data):
+        user = self.is_user(data["login"])
         email_sender(
             recipients=user.email,
             subject="Reset Password",
@@ -96,8 +103,9 @@ class PasswordForgot(AnonymousView):
 
 
 class PasswordReset(AnonymousView):
-    def post(self):
-        data = self.get_request_data(reset_pwd_schema)
+    decorators = [marsh(UserSchema(only=("new_password", "token")))]
+
+    def post(self, data):
         payload = decode_token(data["token"], one_time_token=True)
         if payload:
             user = User.get_user(payload["usor_id"])

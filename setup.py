@@ -6,8 +6,8 @@ with open("requirements.txt") as f:
 setup(
     name="Usor",
     version="1.0",
-    description="[REST API] User Management system based on Flask, Marshmallow,"
-                " mongoengine with json web token authentication",
+    description="[REST API] User Management System in vanilla Flask," 
+                "Marshmallow and mongoengine with Token-Based Authentication",
     author="Drayuk",
     author_email="ekentiako@gmail.com",
     license="MIT License",

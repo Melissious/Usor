@@ -1,4 +1,5 @@
 from flask import Blueprint
+
 from ...common.helpers import register_view
 
 from .views import (

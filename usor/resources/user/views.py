@@ -1,29 +1,21 @@
 from datetime import datetime
 
-from flask import request, make_response, jsonify
+from flask import make_response, jsonify
 from flask_login import current_user
 
 from ...common.helpers import random_string, time_utcnow
 from ...common.email import email_sender
 from ...common.token import encode_token, get_token, decode_token
 from ...common.flask import APIException
-from ...schemas.user import update_schema, pwd_schema, update_pwd_schema
+from ...common.decorators import marsh
+from ...schemas.user import UserSchema
 from ..views import UserView
 
 
 class Logout(UserView):
     # logout the current user
-    """Logout endpoint.
-    ---
-    get:
-        description: logout current user
-        responses:
-            200:
-                description: A pet to be returned
-                schema: UserSchema
-    """
     def get(self):
-        payload = decode_token(get_token(request))
+        payload = decode_token(get_token())
         if current_user.sid == payload.get("sid"):
             current_user.sid = random_string(32, special=True)
             current_user.save()
@@ -37,16 +29,16 @@ class Logout(UserView):
 class AccountInfo(UserView):
     # current user account info
     def get(self):
-        token = get_token(request)
+        token = get_token()
         return current_user.to_dict(token)
 
 
 class AccountUpdate(UserView):
-    # update current user info
-    def post(self):
-        token = get_token(request)
-        data = self.get_request_data(update_schema)
+    decorators = [marsh(UserSchema(only=("username", "email"), partial=True))]
 
+    # update current user info
+    def post(self, data):
+        token = get_token()
         upd_count = 0
         if data.get("username"):
             current_user.username = data["username"]
@@ -81,21 +73,23 @@ class AccountDelete(UserView):
 
 
 class PasswordChange(UserView):
+    decorators = [marsh(UserSchema(only=("old_password", "new_password")))]
+
     # change current user password
-    def post(self):
-        data = self.get_request_data(update_pwd_schema)
+    def post(self, data):
         if current_user.check_password(data["old_password"]):
             current_user.password = data["new_password"]
             current_user.update_at = time_utcnow()
             current_user.save()
-            return current_user.to_dict(get_token(request))
+            return current_user.to_dict(get_token())
         raise APIException("invalid credential", 401)
 
 
 class PasswordVerify(UserView):
+    decorators = [marsh(UserSchema(only=("password",)))]
+
     # verify current user password
-    def post(self):
-        data = self.get_request_data(pwd_schema)
+    def post(self, data):
         if current_user.check_password(data["password"]):
             return {"message": True}
         raise APIException(False, 401)

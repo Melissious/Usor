@@ -1,8 +1,11 @@
-from ...schemas.user import signup_schema, login_schema
 from ...common.flask import APIException
 from ...common.helpers import random_string
+from ...common.decorators import marsh
 from ...models.user import User
+from ...schemas.user import UserSchema
 from ..views import AdminView
+
+login_schema = UserSchema(only=("login",))
 
 
 class UserList(AdminView):
@@ -21,33 +24,45 @@ class UserList(AdminView):
 
 
 class CreateUser(AdminView):
+    decorators = [
+        marsh(UserSchema(only=("username", "email", "password")))
+    ]
+
     # create a new user
-    def post(self):
-        user = self.create_user(signup_schema)
+    def post(self, data):
+        user = self.create_user(
+            data["username"], data["email"], data["password"]
+        )
         return user.to_dict(), 201
 
 
 class UserForceLogout(AdminView):
+    decorators = [marsh(login_schema)]
+
     # force logout a user
-    def post(self):
-        user, data = self.is_user(login_schema)
+    def post(self, data):
+        user = self.is_user(data["login"])
         user.sid = random_string(42, special=True)
         user.save()
         return user.to_dict()
 
 
 class DeleteUser(AdminView):
+    decorators = [marsh(login_schema)]
+
     # delete user
-    def post(self):
-        user, data = self.is_user(login_schema)
+    def post(self, data):
+        user = self.is_user(data["login"])
         user.delete()
         return {"message": True}
 
 
 class UserStatus(AdminView):
+    decorators = [marsh(login_schema)]
+
     # activate or deactivate user account
-    def post(self, action):
-        user, data = self.is_user(login_schema)
+    def post(self, data, action):
+        user = self.is_user(data["login"])
         if action == "activate":
             user.activate = True
         if action == "deactivate":
@@ -57,9 +72,11 @@ class UserStatus(AdminView):
 
 
 class UserAccess(AdminView):
+    decorators = [marsh(login_schema)]
+
     # allow or forbid a user access
-    def post(self, action):
-        user, data = self.is_user(login_schema)
+    def post(self, data, action):
+        user = self.is_user(data["login"])
         if action == "allow":
             user.access = True
         if action == "forbid":

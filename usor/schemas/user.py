@@ -62,23 +62,7 @@ class UserSchema(LoginSchema):
             # network error
             except (resolver.Timeout, resolver.NoNameservers) as e:
                 raise ValidationError("network error.")
-            user = User.get_user(email)
-            if user:
-                raise ValidationError("email address already taken.")
 
     class Meta:
         model = User
         model_fields_kwargs = {'_password': {'load_only': True}}
-
-
-signup_schema = UserSchema(only=("username", "email", "password"))
-update_schema = UserSchema(only=("username", "email"), partial=True)
-signin_schema = UserSchema(only=("login", "password"))
-pwd_schema = UserSchema(only=("password",))
-update_pwd_schema = UserSchema(only=("old_password", "new_password"))
-reset_pwd_schema = UserSchema(only=("new_password", "token"))
-
-login_schema = LoginSchema(only=("login",))
-
-role_schema = RoleSchema(only=("role", "description"))
-user_role_schema = RoleSchema(only=("login", "role"))

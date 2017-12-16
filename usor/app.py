@@ -55,7 +55,7 @@ def quick_errors_handling(app):
 def config_lm():
     @lm.request_loader
     def load_header(request):
-        token = get_token(request)
+        token = get_token()
         payload = decode_token(token)
         if payload:
             user = User.get_user(payload["usor_id"])

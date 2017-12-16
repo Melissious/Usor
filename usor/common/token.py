@@ -1,7 +1,7 @@
 import pyotp
 from werkzeug._compat import to_unicode
 from itsdangerous import TimedJSONWebSignatureSerializer, SignatureExpired, BadSignature
-from flask import current_app
+from flask import current_app, request
 from .flask import APIException
 
 
@@ -39,7 +39,7 @@ def decode_token(token, one_time_token=False, return_header=None):
     return payload
 
 
-def get_token(request):
+def get_token():
     auth_token = request.cookies.get("access_token")
     if auth_token:
         return auth_token
