@@ -5,22 +5,59 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from mongoengine import (
     Q, StringField, DateTimeField, EmailField, BooleanField,
-    IntField, ListField, ReferenceField, PULL
+    IntField, ListField, ReferenceField, PULL, CASCADE
 )
 
 from ..common.helpers import random_string
-from ..extentions import db
 from ..common.helpers import get_remote_addr, time_utcnow
+from ..extentions import db
+
+
+class Token(db.Document):
+    meta = {
+        "collection": "token",
+        "indexes": [{
+            "fields": ["data"],
+        }]
+    }
+    data = StringField()
+    expired = BooleanField(default=False)
+
+    def __init__(self, data, reason=None, *args, **values):
+        super(db.Document, self).__init__(*args, **values)
+        self.data = data
+        self.reason = reason
+
+    def __repr__(self):
+        return "<Token id: {}>".format(str(self.id))
+
+    @property
+    def has_expired(self):
+        if self.expired:
+            return True
+
+    @classmethod
+    def get(cls, data):
+        return cls.objects(data=data).first()
+
+    @classmethod
+    def expire(cls, data):
+        token = cls.get(data)
+        if token:
+            token.expired = True
+            token.save()
+        return token
 
 
 class Role(db.Document):
     meta = {
-        'collection': 'role',
-        'ordering': ['-create_at']
+        "collection": "role",
+        "ordering": ["-create_at"],
+        "indexes": [{
+            "fields": ["name", "description"],
+        }]
     }
-    name = StringField(
-        min_length=2, max_length=20, null=False, unique=True
-    )
+    name = StringField(min_length=2, max_length=20, null=False, unique=True)
     description = StringField(max_length=160, null=False)
     create_at = DateTimeField(default=time_utcnow())
     update_at = DateTimeField(null=True)
@@ -31,6 +68,9 @@ class Role(db.Document):
         self.description = description
         if self.description is None:
             self.description = self.name + " role"
+
+    def __repr__(self):
+        return "<Role {}, {}>".format(self.name, self.description[:60])
 
     def to_dict(self, tracking=False):
         data = {
@@ -46,7 +86,7 @@ class Role(db.Document):
         return data
 
     @classmethod
-    def get_role(cls, role):
+    def get(cls, role):
         try:
             return cls.objects(id=ObjectId(role)).get()
         except InvalidId:
@@ -55,8 +95,11 @@ class Role(db.Document):
 
 class User(db.Document, UserMixin):
     meta = {
-        'collection': 'user',
-        'ordering': ['-create_at']
+        "collection": "user",
+        "ordering": ["-create_at"],
+        "indexes": [{
+            "fields": ["username", "email"],
+        }]
     }
     username = StringField(
         required=True, min_length=3,
@@ -77,20 +120,15 @@ class User(db.Document, UserMixin):
     logged_at = DateTimeField(null=True)
     logged_ip = StringField(max_length=50, null=True)
     login_counter = IntField(default=0)
-    _sid = StringField(max_length=42, null=False)
 
-    roles = ListField(
-        ReferenceField(Role, reverse_delete_rule=PULL)
-    )
+    roles = ListField(ReferenceField(Role, reverse_delete_rule=PULL))
+    tokens = ListField(ReferenceField(Token, reverse_delete_rule=CASCADE))
 
     def __init__(self, username, email, password=None, *args, **values):
         super(db.Document, self).__init__(*args, **values)
         self.username = username
         self.email = email
         self.password = password
-
-    def __unicode__(self):
-        return str(self.id)
 
     def __repr__(self):
         return "<User {}, {}>".format(self.username, self.email)
@@ -110,14 +148,6 @@ class User(db.Document, UserMixin):
             return False
         return check_password_hash(self._password, password)
 
-    def _get_sid(self):
-        return self._sid
-
-    def _set_sid(self, unique_string):
-        self._sid = unique_string
-
-    sid = property(_get_sid, _set_sid)
-
     @property
     def is_active(self):
         if self.email_verify:
@@ -125,7 +155,7 @@ class User(db.Document, UserMixin):
         return False
 
     @classmethod
-    def get_user(cls, login):
+    def get(cls, login):
         try:
             return cls.objects(id=ObjectId(login)).get()
         except InvalidId:
@@ -133,7 +163,7 @@ class User(db.Document, UserMixin):
 
     @classmethod
     def authenticate(cls, login, password):
-        user = cls.get_user(login)
+        user = cls.get(login)
         if user and user.check_password(password):
             user.login_counter += 1
             user.logged_at = time_utcnow()
@@ -145,11 +175,11 @@ class User(db.Document, UserMixin):
 
     def to_dict(self, token=None, tracking=False):
         data = {
-            "auth_token": token,
+            "access_token": token,
             "username": self.username,
             "email": self.email,
-            "usor_id": str(self.id),
-            "usor_roles": [role.name for role in self.roles]
+            "user_id": str(self.id),
+            "user_roles": [role.name for role in self.roles]
         }
         if tracking:
             data.update({

@@ -3,10 +3,11 @@ from werkzeug.exceptions import default_exceptions
 from flask import request
 
 from config import config
+from .common.utils import CustomSessionInterface
 from .extentions import extensions, lm
-from .resources import auth_api, user_api, role_api, admin_api
-from .models.user import User
-from .common.token import decode_token, get_token
+from .resources import auth_api, admin_api, user_api, role_api
+from .models.models import User
+from .token import decode_token, get_token
 from .common.flask import APIException, APIFlask
 from .common.helpers import get_remote_addr
 
@@ -15,7 +16,7 @@ def create_app(env="default"):
     app = APIFlask(__name__)
     app.config.from_object(config[env])
     app.wsgi_app = ProxyFix(app.wsgi_app)
-
+    app.session_interface = CustomSessionInterface()
     #  initialize all extensions
     [ext.init_app(app) for ext in extensions]
 
@@ -56,12 +57,13 @@ def config_lm():
     @lm.request_loader
     def load_header(request):
         token = get_token()
-        payload = decode_token(token)
+        payload = decode_token(token, reason="authentication")
         if payload:
-            user = User.get_user(payload["usor_id"])
-            if user and payload["sid"] == user.sid:
-                user.logged_ip = get_remote_addr()
-                return user.save()
+            user = User.get(payload["user_id"])
+            if user:
+                if token in [token.data for token in user.tokens]:
+                    user.logged_ip = get_remote_addr()
+                    return user.save()
         return None
 
     @lm.unauthorized_handler

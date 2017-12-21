@@ -8,12 +8,11 @@ load_dotenv(dotenv_path, verbose=True)
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY")
     TOKEN_KEY = os.environ.get("TOKEN_KEY") or SECRET_KEY
-    TOTP_KEY = os.environ.get("TOTP_KEY")
 
     MONGODB_SETTINGS = {
-        'db': 'test',
-        'host': 'localhost',
-        'port': 27017
+        "db": "test",
+        "host": "localhost",
+        "port": 27017
     }
     CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL")
     CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND")
@@ -23,6 +22,11 @@ class Config:
     MAIL_USERNAME = None
     MAIL_PASSWORD = None
     MAIL_DEFAULT_SENDER = "admin@localhost.loc"
+
+    SESSION_COOKIE_NAME = "access_token"
+    #  SESSION_COOKIE_DOMAIN =
+    SESSION_COOKIE_PATH = "/"
+    SESSION_COOKIE_HTTPONLY = True
 
 
 class Development(Config):

@@ -2,12 +2,12 @@ from dns import resolver
 from marshmallow import fields, validates, ValidationError
 from marshmallow.validate import Length
 
-from ..models.user import User, Role
+from ..models.models import User, Role
 from ..extentions import ma
 
 
 def used_data(data):
-    if User.get_user(data):
+    if User.get(data):
         raise ValidationError("already use.")
 
 
@@ -21,7 +21,7 @@ class LoginSchema(ma.Schema):
 
     @validates
     def validate_login(self, login):
-        if not User.get_user(login):
+        if not User.get(login):
             raise ValidationError('user not found')
 
     class Meta:
@@ -47,7 +47,7 @@ class UserSchema(LoginSchema):
 
     @validates
     def validate_role(self, role):
-        if not Role.get_role(role):
+        if not Role.get(role):
             raise ValidationError('role not found')
 
     @validates

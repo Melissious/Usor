@@ -1,7 +1,6 @@
 from ...common.flask import APIException
-from ...common.helpers import random_string
 from ...common.decorators import marsh
-from ...models.user import User
+from ...models.models import User
 from ...schemas.user import UserSchema
 from ..views import AdminView
 
@@ -10,17 +9,17 @@ login_schema = UserSchema(only=("login",))
 
 class UserList(AdminView):
     # get a unique user info or all user info
-    def get(self, usor_id=None):
-        if not usor_id:
+    def get(self, user_id=None):
+        if not user_id:
             req = User.objects.all()
             users = [user.to_dict() for user in req]
             if users:
                 return {"users": users}
 
-        user = User.get_user(usor_id)
+        user = User.get(user_id)
         if user:
             return user.to_dict()
-        raise APIException("user not found", 404)
+        raise APIException("User not found.", 404)
 
 
 class CreateUser(AdminView):
@@ -42,7 +41,6 @@ class UserForceLogout(AdminView):
     # force logout a user
     def post(self, data):
         user = self.is_user(data["login"])
-        user.sid = random_string(42, special=True)
         user.save()
         return user.to_dict()
 

@@ -1,7 +1,7 @@
 import click
 
 from usor import create_app
-from usor.models.user import User, Role
+from usor.models.models import User, Role
 
 app = create_app()
 

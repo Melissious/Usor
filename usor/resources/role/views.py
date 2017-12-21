@@ -1,5 +1,5 @@
 from ...schemas.user import RoleSchema
-from ...models.user import Role, User
+from ...models.models import Role, User
 from ...common.flask import APIException
 from ...common.helpers import time_utcnow
 from ...common.decorators import marsh
